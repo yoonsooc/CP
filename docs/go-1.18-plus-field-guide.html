@@ -1,0 +1,975 @@
+<title>Go 1.18+ 필드 가이드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F5F8F9;
+    --surface: #FFFFFF;
+    --ink: #182129;
+    --muted: #5A6A76;
+    --line: #D7E0E5;
+    --accent: #0B6E78;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #E2F1F2;
+    --warn: #9A6A12;
+    --warn-soft: #FBF2DE;
+    --exp: #5F4FA0;
+    --exp-soft: #ECE8F8;
+    --code-bg: #EDF2F4;
+    --code-ink: #1E2A33;
+    --shadow: 0 1px 2px rgba(24, 33, 41, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E1418;
+      --surface: #161E24;
+      --ink: #E4EBF0;
+      --muted: #97A6B2;
+      --line: #28343D;
+      --accent: #4CC3CD;
+      --accent-ink: #07262A;
+      --accent-soft: #11333A;
+      --warn: #E3B050;
+      --warn-soft: #2F2510;
+      --exp: #B7AAE9;
+      --exp-soft: #262040;
+      --code-bg: #0B1014;
+      --code-ink: #D9E2E8;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E1418;
+    --surface: #161E24;
+    --ink: #E4EBF0;
+    --muted: #97A6B2;
+    --line: #28343D;
+    --accent: #4CC3CD;
+    --accent-ink: #07262A;
+    --accent-soft: #11333A;
+    --warn: #E3B050;
+    --warn-soft: #2F2510;
+    --exp: #B7AAE9;
+    --exp-soft: #262040;
+    --code-bg: #0B1014;
+    --code-ink: #D9E2E8;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+  a:hover, a:focus-visible { border-bottom-color: var(--accent); outline: none; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code, pre, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  code { font-size: 0.9em; background: var(--code-bg); color: var(--code-ink); padding: 0.1em 0.35em; border-radius: 3px; }
+  pre {
+    margin: 0.75rem 0 0;
+    padding: 0.9rem 1rem;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.25rem 4rem;
+  }
+  @media (min-width: 980px) {
+    .shell { grid-template-columns: 232px minmax(0, 1fr); gap: 3rem; }
+    nav.toc { position: sticky; top: 1.5rem; align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+  }
+  main { max-width: 860px; min-width: 0; }
+
+  header.masthead {
+    padding: 2.75rem 0 1.75rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2rem;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    line-height: 1.2;
+    margin: 0.4rem 0 0.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .lede { font-size: 1.05rem; color: var(--muted); max-width: 60ch; margin: 0; }
+  .meta { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.85rem; color: var(--muted); }
+
+  nav.toc { padding-top: 2.75rem; font-size: 0.88rem; }
+  nav.toc .eyebrow { margin-bottom: 0.5rem; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 0; }
+  nav.toc a { display: block; padding: 0.3rem 0.6rem; border-left: 2px solid var(--line); border-bottom: none; color: var(--ink); }
+  nav.toc a:hover { border-left-color: var(--accent); background: var(--accent-soft); }
+  nav.toc li.sub a { padding-left: 1.4rem; color: var(--muted); font-size: 0.84rem; }
+
+  h2 {
+    font-size: 1.55rem;
+    margin: 3rem 0 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--ink);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  h2 .num { color: var(--muted); font-weight: 500; margin-right: 0.5rem; font-variant-numeric: tabular-nums; }
+  h3 {
+    font-size: 1.15rem;
+    margin: 0;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+  p { margin: 0.6rem 0; }
+  .section-intro { color: var(--muted); max-width: 64ch; margin-bottom: 1.25rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+  th, td { text-align: left; padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+  tr:last-child td { border-bottom: none; }
+  td.ver { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+  td.date { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; margin: 1rem 0 0; font-size: 0.85rem; color: var(--muted); align-items: center; }
+  .chip {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--surface);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .chip.now { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .chip.good { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .chip.exp { background: var(--exp-soft); color: var(--exp); border-color: transparent; }
+  .ver-badge {
+    display: inline-block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.74rem;
+    padding: 0.05rem 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--muted);
+    background: var(--bg);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  article.item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 1.25rem 1.4rem 1.3rem;
+    margin: 1rem 0;
+    box-shadow: var(--shadow);
+  }
+  article.item .head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; margin-bottom: 0.35rem; }
+  article.item .head .spacer { flex: 1; }
+  .field { margin-top: 0.9rem; }
+  .field-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+  }
+  .critique {
+    margin-top: 1rem;
+    padding: 0.8rem 1rem;
+    background: var(--warn-soft);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 4px 4px 0;
+  }
+  .critique .field-label { color: var(--warn); }
+  .critique p { margin: 0.3rem 0; }
+  ul.refs { margin: 0.3rem 0 0; padding-left: 1.1rem; font-size: 0.88rem; }
+  ul.refs li { margin: 0.15rem 0; }
+  ul.refs .src { color: var(--muted); }
+  ul { padding-left: 1.25rem; }
+  li { margin: 0.25rem 0; }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    margin: 1rem 0;
+  }
+  .callout p { margin: 0.4rem 0; }
+  .two { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  @media (min-width: 760px) { .two { grid-template-columns: 1fr 1fr; } }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="목차">
+  <div class="eyebrow">목차</div>
+  <ol>
+    <li><a href="#scope">범위와 읽는 법</a></li>
+    <li><a href="#timeline">연표 1.18 → 1.27</a></li>
+    <li><a href="#lang">1. 언어</a></li>
+    <li class="sub"><a href="#generics">제네릭의 성숙</a></li>
+    <li class="sub"><a href="#loopvar">for 루프 변수 의미 변경</a></li>
+    <li class="sub"><a href="#iter">이터레이터</a></li>
+    <li><a href="#stdlib">2. 표준 라이브러리</a></li>
+    <li class="sub"><a href="#slices">slices, maps, cmp</a></li>
+    <li class="sub"><a href="#errors">errors 와 작은 편의 기능</a></li>
+    <li class="sub"><a href="#slog">log/slog</a></li>
+    <li class="sub"><a href="#servemux">net/http ServeMux</a></li>
+    <li class="sub"><a href="#jsonv2">encoding/json/v2</a></li>
+    <li><a href="#runtime">3. 런타임과 성능</a></li>
+    <li><a href="#testing">4. 테스트와 진단</a></li>
+    <li><a href="#tooling">5. 도구와 빌드</a></li>
+    <li><a href="#security">6. 보안</a></li>
+    <li><a href="#critique">7. 비판적 시각 종합</a></li>
+    <li><a href="#checklist">8. 현업 적용 체크리스트</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="masthead">
+  <div class="eyebrow">Go 1.18 (2022.03) 부터 Go 1.27 (2026.08) 까지</div>
+  <h1>Go 1.18+ 필드 가이드</h1>
+  <p class="lede">제네릭 도입 이후 4년 반 동안 Go에 들어온 변화 가운데, 현업 코드에서 실제로 자주 마주치는 것만 골라 정리했습니다. 기능마다 무엇이 바뀌었는지, 어디에 쓰는지, 그리고 어떤 비판이 있는지를 함께 적었습니다.</p>
+  <div class="meta">
+    <span>기준일 2026-08-23</span>
+    <span>최신 안정 버전 Go 1.27</span>
+    <span>출처는 각 항목 하단에 링크</span>
+  </div>
+</header>
+
+<section id="scope">
+  <h2>범위와 읽는 법</h2>
+  <p>Go는 매년 2월과 8월에 새 버전을 내고, 최근 두 버전만 보안 패치를 받습니다. 그래서 2026년 8월 현재 공식 지원 범위는 1.26과 1.27이고, 현업 프로젝트의 <code>go.mod</code>에 적힌 버전은 대개 1.22에서 1.25 사이에 분포합니다. 이 문서는 "지금 1.22 근처에 있는 프로젝트를 1.27까지 끌어올린다면 무엇이 달라지는가"라는 관점으로 읽으면 가장 유용합니다.</p>
+  <p>각 항목에는 도입 우선순위를 표시했습니다.</p>
+  <div class="legend">
+    <span><span class="chip now">지금 도입</span> 새 코드에서 기본으로 써야 하는 것</span>
+    <span><span class="chip good">권장</span> 알면 코드가 짧아지거나 안전해지는 것</span>
+    <span><span class="chip">상황에 따라</span> 특정 워크로드나 팀 규모에서만 이득</span>
+    <span><span class="chip exp">실험</span> GOEXPERIMENT 뒤에 있거나 아직 흔들리는 것</span>
+  </div>
+  <div class="callout">
+    <p><strong>한 가지 전제.</strong> Go의 "Go 1 호환성 약속"은 <em>컴파일이 계속 된다</em>는 약속이지 <em>동작이 그대로다</em>는 약속이 아닙니다. 1.21부터 <code>go.mod</code>의 <code>go</code> 줄이 언어 의미와 런타임 기본값을 결정하는 스위치가 됐기 때문에, 이 줄을 올리는 순간 for 루프 의미(1.22), 타이머 채널 동작(1.23), ServeMux 리다이렉트 코드(1.26) 같은 것이 함께 바뀝니다. 문서 곳곳의 "이 줄을 올리면" 이라는 표현이 바로 이 뜻입니다.</p>
+  </div>
+</section>
+
+<section id="timeline">
+  <h2>연표 1.18 → 1.27</h2>
+  <p class="section-intro">버전별 대표 변화만 뽑았습니다. 굵게 표시한 것이 현업에서 체감이 큰 항목입니다.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>버전</th><th>릴리스</th><th>대표 변화</th></tr></thead>
+    <tbody>
+      <tr><td class="ver">1.18</td><td class="date">2022-03</td><td><strong>제네릭</strong>, <code>any</code>, <code>comparable</code>, 퍼징(<code>go test -fuzz</code>), 워크스페이스(<code>go.work</code>)</td></tr>
+      <tr><td class="ver">1.19</td><td class="date">2022-08</td><td><strong><code>GOMEMLIMIT</code></strong> 소프트 메모리 한도, <code>atomic.Int64</code> 같은 타입형 원자 값, 문서 주석 서식 정리</td></tr>
+      <tr><td class="ver">1.20</td><td class="date">2023-02</td><td>PGO 프리뷰, <strong><code>errors.Join</code></strong>과 <code>%w</code> 여러 개, 슬라이스→배열 변환, <code>arena</code> 실험(이후 보류)</td></tr>
+      <tr><td class="ver">1.21</td><td class="date">2023-08</td><td><strong><code>slices</code>, <code>maps</code>, <code>cmp</code>, <code>log/slog</code></strong>, 내장 <code>min</code>/<code>max</code>/<code>clear</code>, PGO 정식, 툴체인 자동 관리, <code>context.WithoutCancel</code></td></tr>
+      <tr><td class="ver">1.22</td><td class="date">2024-02</td><td><strong>for 루프 변수 반복마다 새로 생성</strong>, <code>range N</code>, <strong>ServeMux 패턴 라우팅</strong>, <code>math/rand/v2</code></td></tr>
+      <tr><td class="ver">1.23</td><td class="date">2024-08</td><td><strong>이터레이터(range over func, <code>iter</code>)</strong>, <code>unique</code>, 타이머 GC 개선, 텔레메트리 옵트인</td></tr>
+      <tr><td class="ver">1.24</td><td class="date">2025-02</td><td>제네릭 타입 별칭, <strong>Swiss Table 맵</strong>, <strong><code>tool</code> 지시어</strong>, <code>os.Root</code>, <code>testing.B.Loop</code>, <code>weak</code>, FIPS 140-3 모드, <code>omitzero</code></td></tr>
+      <tr><td class="ver">1.25</td><td class="date">2025-08</td><td><strong><code>testing/synctest</code> 정식</strong>, <strong>컨테이너 인식 <code>GOMAXPROCS</code></strong>, 플라이트 레코더, <code>sync.WaitGroup.Go</code>, json/v2 실험, Green Tea GC 실험</td></tr>
+      <tr><td class="ver">1.26</td><td class="date">2026-02</td><td><strong>Green Tea GC 기본값</strong>, <code>new(expr)</code>, 자기참조 제네릭 제약, <strong><code>go fix</code> 모더나이저</strong>, <code>errors.AsType</code>, <code>slog.NewMultiHandler</code>, cgo 호출 30% 가속</td></tr>
+      <tr><td class="ver">1.27</td><td class="date">2026-08</td><td><strong>제네릭 메서드</strong>, <strong><code>encoding/json/v2</code> 정식</strong>, <code>uuid</code> 패키지, <strong>고루틴 누수 프로파일 정식</strong>, 소형 할당 최대 30% 가속, 포스트양자 서명(ML-DSA)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <ul class="refs">
+    <li><a href="https://go.dev/doc/devel/release">Release History</a> <span class="src">go.dev</span>, 각 버전 노트는 <a href="https://go.dev/doc/go1.27">go1.27</a>, <a href="https://go.dev/doc/go1.26">go1.26</a>, <a href="https://go.dev/doc/go1.25">go1.25</a>, <a href="https://go.dev/doc/go1.24">go1.24</a>, <a href="https://go.dev/doc/go1.23">go1.23</a>, <a href="https://go.dev/doc/go1.22">go1.22</a>, <a href="https://go.dev/doc/go1.21">go1.21</a></li>
+    <li><a href="https://antonz.org/go-1-26/">Go 1.26 interactive tour</a> <span class="src">Anton Zhiyanov, 브라우저에서 바로 실행해 보는 버전별 투어</span></li>
+  </ul>
+</section>
+
+<section id="lang">
+  <h2><span class="num">1</span>언어</h2>
+  <p class="section-intro">Go는 언어 자체를 거의 바꾸지 않는 것으로 유명했습니다. 그 기조가 깨진 것이 1.18이고, 이후 네 번의 의미 있는 언어 변경이 있었습니다.</p>
+
+  <article class="item" id="generics">
+    <div class="head">
+      <h3>제네릭의 성숙</h3>
+      <span class="ver-badge">1.18 → 1.24 → 1.26 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>1.18에서 타입 매개변수가 들어왔지만, 처음 몇 년은 "함수와 타입에만 쓸 수 있고 메서드에는 못 쓴다"는 제약이 가장 큰 불만이었습니다. 이 빈틈이 단계적으로 메워졌습니다.</p>
+    <ul>
+      <li><strong>1.24</strong> 제네릭 타입 별칭. <code>type Set[T comparable] = map[T]struct{}</code> 처럼 별칭에도 매개변수를 붙일 수 있습니다.</li>
+      <li><strong>1.26</strong> 자기참조 제약. <code>type Adder[A Adder[A]] interface { Add(A) A }</code> 같은 선언이 가능해져 "자기 타입을 받아 자기 타입을 돌려주는" 인터페이스를 표현할 수 있습니다.</li>
+      <li><strong>1.27</strong> 제네릭 메서드. 메서드가 자기만의 타입 매개변수를 가질 수 있습니다. 단, 인터페이스의 메서드는 여전히 타입 매개변수를 가질 수 없습니다.</li>
+    </ul>
+<pre><code>// Go 1.27: 메서드에 타입 매개변수
+type List[T any] struct{ items []T }
+
+func (l *List[T]) Map[U any](f func(T) U) *List[U] {
+    out := &amp;List[U]{items: make([]U, 0, len(l.items))}
+    for _, v := range l.items {
+        out.items = append(out.items, f(v))
+    }
+    return out
+}
+
+// 1.27 이전에는 패키지 수준 함수로 우회해야 했다
+func Map[T, U any](l *List[T], f func(T) U) *List[U] { /* ... */ }</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>컬렉션 유틸리티(<code>Map</code>, <code>Filter</code>, 우선순위 큐), 리포지토리 계층의 공통 CRUD, 옵션 패턴, 타입 안전한 이벤트 버스에 자리잡았습니다. 반대로 "인터페이스로 충분한 곳"에 제네릭을 쓰면 오히려 읽기 어려워지므로, Go 팀이 낸 <a href="https://go.dev/blog/when-generics">When To Use Generics</a>의 기준(같은 코드를 타입만 바꿔 반복할 때, 그리고 메서드 없이 동작하는 자료구조일 때)이 여전히 유효합니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p><strong>성능이 항상 좋아지는 것은 아닙니다.</strong> Go 제네릭은 C++ 처럼 타입마다 코드를 찍어내지 않고 "GC shape" 단위로 묶은 뒤 사전(dictionary)을 넘기는 방식입니다. PlanetScale의 Vicent Martí는 1.18 시점에 이 방식 때문에 인터페이스 메서드를 호출하는 제네릭 함수가 인터페이스 버전보다 느려지는 사례를 벤치마크로 보였습니다. 이후 컴파일러 개선으로 격차는 줄었지만 구조는 같습니다. 핫 패스에서 제네릭으로 바꿀 때는 반드시 벤치마크를 같이 돌리는 것이 안전합니다.</p>
+      <p><strong>5년 반이 걸렸습니다.</strong> 제네릭 메서드는 1.18 설계 당시 이미 요구됐지만 1.27에야 들어왔고, 인터페이스 메서드의 타입 매개변수는 여전히 없습니다. "단순함을 지킨다"는 원칙과 "필요한 표현력"이 충돌할 때 Go는 수년 단위로 느리게 움직인다는 점을 감안해 두는 것이 좋습니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/intro-generics">An Introduction To Generics</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://planetscale.com/blog/generics-can-make-your-go-code-slower">Generics can make your Go code slower</a> <span class="src">PlanetScale, Vicent Martí</span></li>
+        <li><a href="https://go.dev/blog/alias-names">What's in an (Alias) Name?</a> <span class="src">Go 블로그, 1.24 제네릭 타입 별칭</span></li>
+        <li><a href="https://go.dev/blog/go1.27">Go 1.27 is released</a> <span class="src">Go 블로그, 제네릭 메서드 소개</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="loopvar">
+    <div class="head">
+      <h3>for 루프 변수가 반복마다 새로 만들어진다</h3>
+      <span class="ver-badge">1.22</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>1.21까지는 <code>for i, v := range xs</code>의 <code>i</code>, <code>v</code>가 루프 전체에서 하나의 변수였습니다. 그래서 고루틴이나 클로저가 그 변수를 잡으면 마지막 값만 보는 버그가 생겼고, 그래서 <code>v := v</code>라는 관용구가 필요했습니다. 1.22부터는 <code>go.mod</code>의 <code>go</code> 줄이 1.22 이상인 모듈에서 반복마다 새 변수가 만들어집니다. 같은 버전에 <code>for i := range 10</code> 처럼 정수에 바로 range를 거는 문법도 들어왔습니다.</p>
+<pre><code>// go 1.22 이상 모듈에서는 v := v 가 필요 없다
+for _, v := range items {
+    go func() { process(v) }()   // 각 고루틴이 자기 v 를 본다
+}
+
+for i := range 10 { fmt.Println(i) }   // 0..9</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>Uber가 자사 코드베이스의 데이터 레이스를 분류한 보고에서 루프 변수 캡처가 가장 흔한 패턴이었습니다. 그만큼 이 변경의 실효는 큽니다. 다만 이 변경은 <code>go</code> 줄을 올려야 적용되므로, 오래된 모듈을 올릴 때 <code>v := v</code> 제거는 <code>go fix</code>(1.26, 아래 참고)가 해 줍니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>이것은 명백한 <strong>의미 변경</strong>이고, "호환성 약속"을 <code>go.mod</code> 버전 게이트로 우회한 첫 사례입니다. Russ Cox는 구글 전체 코드에서 이 변경으로 깨지는 테스트가 극소수였고 그마저 기존 버그였다고 보고했지만, 이 선례 덕분에 이후 타이머 채널(1.23), 리다이렉트 코드(1.26) 같은 동작 변경도 같은 방식으로 들어오게 됐습니다. <code>go</code> 줄을 올리는 것을 "문법 버전 올리기"가 아니라 "런타임 동작 변경에 동의하기"로 인식해야 합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/loopvar-preview">Fixing For Loops in Go 1.22</a> <span class="src">Go 블로그, Russ Cox</span></li>
+        <li><a href="https://www.uber.com/blog/data-race-patterns-in-go/">Data Race Patterns in Go</a> <span class="src">Uber Engineering</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="iter">
+    <div class="head">
+      <h3>이터레이터 (range over func)</h3>
+      <span class="ver-badge">1.23</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p>특정 형태의 함수에 <code>for range</code>를 걸 수 있게 됐습니다. <code>iter.Seq[V]</code>는 <code>func(yield func(V) bool)</code>, <code>iter.Seq2[K, V]</code>는 <code>func(yield func(K, V) bool)</code> 타입의 별칭입니다. 표준 라이브러리의 <code>slices</code>, <code>maps</code>, <code>strings</code>, <code>bytes</code>에 이터레이터를 주고받는 함수가 대거 추가됐습니다.</p>
+<pre><code>func (l *List[T]) All() iter.Seq2[int, T] {
+    return func(yield func(int, T) bool) {
+        for i, v := range l.items {
+            if !yield(i, v) { return }   // 호출자가 break 하면 멈춘다
+        }
+    }
+}
+
+for i, v := range l.All() { /* ... */ }
+
+keys := slices.Sorted(maps.Keys(m))         // 맵 키를 정렬된 슬라이스로
+for line := range strings.Lines(text) { }   // 1.24, 줄 단위 순회(할당 없음)</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>직접 이터레이터를 "만드는" 일보다 표준 라이브러리가 돌려주는 이터레이터를 "소비하는" 일이 훨씬 많습니다. <code>maps.Keys</code>가 슬라이스가 아니라 <code>iter.Seq</code>를 돌려준다는 점, 그래서 <code>slices.Collect</code>나 <code>slices.Sorted</code>로 감싸야 한다는 점만 알아도 대부분의 코드가 읽힙니다. DB 커서, 페이지네이션 API, 대용량 파일 스트리밍처럼 "전부 메모리에 올리고 싶지 않은" 자료를 노출할 때 직접 만들 가치가 있습니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p><strong>"단순한 언어"에 가장 어울리지 않는 기능</strong>이라는 평이 많습니다. "함수를 range 하면, 그 함수가 콜백을 호출하고, 콜백이 bool을 돌려줘서 중단을 알린다"는 구조는 처음 보는 사람이 바로 이해하기 어렵습니다. Miguel Young de la Sota의 글은 push 방식 설계의 한계와 컴파일러가 이를 되감는 복잡한 변환을 비판적으로 분석했고, Chris Siebenmann은 <code>yield</code>의 반환값을 무시하는 실수가 얼마나 쉬운지 지적했습니다. 또 <code>iter.Pull</code>은 내부적으로 코루틴을 쓰기 때문에 핫 루프에서는 비용이 눈에 띕니다. 팀 내 합의 없이 직접 이터레이터를 남발하면 코드 리뷰 비용이 크게 늘어납니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/range-functions">Range Over Function Types</a> <span class="src">Go 블로그, Ian Lance Taylor</span></li>
+        <li><a href="https://mcyoung.xyz/2024/12/16/rangefuncs/">Go's Weird Little Iterators</a> <span class="src">mcyoung, 비판적 분석</span></li>
+        <li><a href="https://utcc.utoronto.ca/~cks/space/blog/programming/GoIteratorsAndAvoidingMistakes">Go's 'range over functions' iterators and avoiding mistakes</a> <span class="src">Chris Siebenmann</span></li>
+        <li><a href="https://boldlygo.tech/posts/2024-07-18-range-over-func/">First impressions of Go 1.23's range-over-func feature</a> <span class="src">Boldly Go, Jonathan Hall</span></li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section id="stdlib">
+  <h2><span class="num">2</span>표준 라이브러리</h2>
+  <p class="section-intro">"외부 패키지를 하나 줄일 수 있는가"를 기준으로 골랐습니다. 정렬/탐색, 로깅, 라우팅, JSON이 그 네 축입니다.</p>
+
+  <article class="item" id="slices">
+    <div class="head">
+      <h3>slices, maps, cmp 와 내장 min / max / clear</h3>
+      <span class="ver-badge">1.21 → 1.23</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>제네릭 기반으로 만든 첫 표준 패키지들입니다. <code>sort.Slice</code>와 <code>reflect</code> 기반 비교가 필요 없어졌고, 1.23에서 이터레이터 버전(<code>slices.All</code>, <code>slices.Values</code>, <code>maps.Keys</code>, <code>slices.Collect</code>)이 추가됐습니다.</p>
+<pre><code>slices.Sort(a)
+slices.SortFunc(users, func(x, y User) int { return cmp.Compare(x.Age, y.Age) })
+i, ok := slices.BinarySearch(a, 42)
+if slices.Contains(roles, "admin") { }
+a = slices.Compact(a)               // 연속 중복 제거
+best := max(x, y, z)                // 내장 함수
+clear(m)                            // 맵 비우기</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p><code>golang.org/x/exp/slices</code>를 쓰던 코드는 import 경로만 바꾸면 됩니다. <code>sort.Slice</code>는 인덱스 클로저를 받아 실수하기 쉬웠는데 <code>slices.SortFunc</code>는 값 둘을 받는 비교 함수라 실수가 줄었습니다. <code>go fix</code>(1.26)가 <code>sort.Slice</code>→<code>slices.SortFunc</code>, 수동 루프→<code>slices.Contains</code> 같은 치환을 자동으로 해 줍니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>표준이 생겼다고 해서 <code>lo</code>(samber/lo) 같은 유틸리티 패키지가 사라지지는 않았습니다. <code>Map</code>, <code>Filter</code>, <code>Reduce</code>는 여전히 표준에 없고, Go 팀은 "for 루프로 쓰라"는 입장을 유지합니다. 그래서 팀마다 "표준만 쓴다"와 "lo를 허용한다"가 갈리고, 이 합의를 먼저 하지 않으면 같은 저장소 안에 두 스타일이 섞입니다.</p>
+    </div>
+  </article>
+
+  <article class="item" id="errors">
+    <div class="head">
+      <h3>errors 와 작은 편의 기능 모음</h3>
+      <span class="ver-badge">1.20 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <ul>
+      <li><strong>1.20</strong> <code>errors.Join(errs...)</code>와 <code>fmt.Errorf("...: %w, %w", a, b)</code>. 여러 에러를 하나로 묶고, <code>errors.Is</code>/<code>As</code>가 트리 전체를 탐색합니다. 검증 에러 여러 개를 한 번에 돌려줄 때 씁니다.</li>
+      <li><strong>1.21</strong> <code>context.WithoutCancel</code>(부모 취소를 끊고 값만 상속), <code>context.AfterFunc</code>, <code>sync.OnceValue</code>. 요청 컨텍스트에서 비동기 후처리를 분리할 때 <code>WithoutCancel</code>이 정석이 됐습니다.</li>
+      <li><strong>1.22</strong> <code>math/rand/v2</code>. 자동 시드, <code>rand.N(10)</code> 같은 제네릭 함수, 더 빠른 ChaCha8/PCG 생성기. 1.27에서는 <code>Rand.N</code>이 제네릭 메서드의 첫 표준 사용 사례가 됐습니다.</li>
+      <li><strong>1.23</strong> <code>unique.Make</code>. 문자열 인터닝을 표준으로 제공합니다. 같은 문자열이 수백만 개 반복되는 로그 파서나 라벨 저장소에서 메모리를 크게 줄입니다.</li>
+      <li><strong>1.25</strong> <code>sync.WaitGroup.Go(f)</code>. <code>Add(1)</code>, <code>go func(){ defer Done() ... }()</code> 세 줄이 한 줄이 됩니다.</li>
+      <li><strong>1.26</strong> <code>errors.AsType[E](err)</code>. <code>var e *MyErr; errors.As(err, &amp;e)</code>의 제네릭 버전으로, 포인터 변수를 따로 선언할 필요가 없습니다. <code>new(expr)</code>도 이 버전입니다. <code>&amp;x</code>를 만들려고 임시 변수를 두던 직렬화 코드(<code>Age: new(computeAge())</code>)가 깔끔해집니다.</li>
+      <li><strong>1.27</strong> <code>strings.CutLast</code>, <code>bytes.CutLast</code>, 표준 <code>uuid</code> 패키지, <code>net/url.URL.Clone</code>.</li>
+    </ul>
+<pre><code>// 1.26
+if e, ok := errors.AsType[*NotFoundError](err); ok {
+    return http.StatusNotFound, e.Resource
+}
+
+// 1.25
+var wg sync.WaitGroup
+for _, job := range jobs {
+    wg.Go(func() { run(job) })
+}
+wg.Wait()</code></pre>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p><code>uuid</code>가 표준에 들어오기까지 <code>google/uuid</code>가 사실상 표준 역할을 10년 가까이 했습니다. 표준 패키지는 "널리 쓰이는 외부 패키지를 흡수한다"는 패턴을 반복하는데, 이 과정에서 API가 미묘하게 달라 마이그레이션 비용이 생깁니다. 도입 직후에는 외부 패키지를 바로 걷어내기보다 새 코드에서만 표준을 쓰는 편이 안전합니다.</p>
+    </div>
+  </article>
+
+  <article class="item" id="slog">
+    <div class="head">
+      <h3>log/slog 구조화 로깅</h3>
+      <span class="ver-badge">1.21 → 1.26</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p>키-값 구조의 로그를 표준으로 제공합니다. <code>Logger</code>(앞단 API)와 <code>Handler</code>(출력 형식과 목적지)를 분리했기 때문에, 라이브러리는 <code>*slog.Logger</code>만 받고 출력 형식은 애플리케이션이 정하는 구조가 가능해졌습니다. 1.26에 <code>slog.NewMultiHandler</code>가 들어와 stdout과 파일, 또는 JSON과 텍스트를 동시에 내보낼 때 직접 핸들러를 쓸 필요가 없어졌습니다.</p>
+<pre><code>logger := slog.New(slog.NewJSONHandler(os.Stdout, &amp;slog.HandlerOptions{Level: slog.LevelInfo}))
+logger = logger.With("service", "orders")
+logger.InfoContext(ctx, "order created",
+    slog.String("order_id", id),
+    slog.Duration("took", elapsed),
+)</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>가장 큰 가치는 <strong>라이브러리 경계</strong>에 있습니다. 이전에는 내부 공용 패키지가 zap을 쓰면 그 패키지를 쓰는 모든 서비스가 zap에 묶였습니다. 지금은 공용 패키지가 <code>*slog.Logger</code>를 받고, 서비스 쪽에서 zap이나 zerolog의 slog 핸들러 어댑터를 꽂는 구성이 가능합니다. 트레이스 ID를 자동으로 붙이려면 <code>Handler</code>를 한 겹 감싸 <code>ctx</code>에서 값을 꺼내는 패턴을 씁니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p><strong>API가 장황하고 타입 검사가 약합니다.</strong> <code>logger.Info("msg", "key", value)</code> 형태는 키와 값이 홀수로 어긋나도 컴파일이 되고, 런타임에 <code>!BADKEY</code>로 찍힙니다. <code>slog.String</code> 같은 타입 생성자를 쓰면 안전하지만 줄이 길어집니다. 성능은 zap, zerolog 대비 할당이 더 많아 초고빈도 로깅에서는 여전히 밀립니다. 결과적으로 "표준이 생겼지만 생태계가 통일되지는 않은" 상태이고, 많은 팀이 slog 인터페이스에 zap 핸들러를 꽂는 절충을 택하고 있습니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/slog">Structured Logging with slog</a> <span class="src">Go 블로그, Jonathan Amsterdam</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="servemux">
+    <div class="head">
+      <h3>net/http ServeMux 메서드와 경로 패턴</h3>
+      <span class="ver-badge">1.22 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p>표준 라우터가 HTTP 메서드, 경로 변수(<code>{id}</code>), 와일드카드(<code>{path...}</code>), 정확 일치(<code>{$}</code>)를 지원하게 됐습니다. 패턴이 겹치면 "더 구체적인 쪽"이 이기고, 우선순위를 정할 수 없으면 등록 시점에 패닉을 냅니다. 1.25에 CSRF 방어용 <code>http.CrossOriginProtection</code>이, 1.27에 실제 포트를 열지 않는 <code>httptest.NewTestServer</code>가 추가됐습니다.</p>
+<pre><code>mux := http.NewServeMux()
+mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+    id := r.PathValue("id")
+    // ...
+})
+mux.HandleFunc("POST /users", createUser)
+mux.HandleFunc("GET /static/{path...}", serveStatic)
+mux.HandleFunc("GET /{$}", home)          // "/" 만 정확히 매칭</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>작은 서비스, 내부 API, 사이드카 수준에서는 gorilla/mux나 chi 없이 표준만으로 충분해졌습니다. 핸들러가 <code>http.Handler</code> 인터페이스 그대로이므로 기존 미들웨어는 그대로 씁니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>라우트 그룹(<code>/api/v1</code> 아래 전부에 미들웨어 적용), 경로 변수에 정규식 제약, 라우트 목록 출력 같은 기능은 여전히 없습니다. 그래서 중간 규모 이상 서비스에서는 chi가 계속 쓰입니다. 또한 1.26부터 끝 슬래시 리다이렉트가 301에서 307로 바뀌었는데, 이런 동작 변경이 <code>go</code> 줄을 올릴 때 조용히 따라옵니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/routing-enhancements">Routing Enhancements for Go 1.22</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://eli.thegreenplace.net/2023/better-http-server-routing-in-go-122/">Better HTTP server routing in Go 1.22</a> <span class="src">Eli Bendersky, gorilla/mux 와의 비교</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="jsonv2">
+    <div class="head">
+      <h3>encoding/json/v2</h3>
+      <span class="ver-badge">1.25 실험 → 1.27 정식</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>표준 라이브러리에서 두 번째로 "v2" 패키지가 된 사례입니다(첫 번째는 <code>math/rand/v2</code>). 저수준 토큰 처리는 <code>encoding/json/jsontext</code>로 분리됐고, <code>v2</code>는 가변 인자 <code>Options</code>로 동작을 조정합니다. 1.27부터는 <strong>기존 <code>encoding/json</code>도 내부적으로 v2 엔진 위에서 동작</strong>하며, 문제가 생기면 <code>GOEXPERIMENT=nojsonv2</code>로 되돌릴 수 있습니다.</p>
+    <p>v1과 다른 기본값이 핵심입니다.</p>
+    <ul>
+      <li>필드 이름 매칭이 <strong>대소문자를 구분</strong>합니다(v1은 구분하지 않았습니다).</li>
+      <li>중복 키와 잘못된 UTF-8을 <strong>거부</strong>합니다.</li>
+      <li><code>omitzero</code> 태그가 1급 기능입니다(1.24에 v1에도 추가됨). <code>time.Time{}</code> 같은 구조체 영값을 생략할 수 있어 <code>omitempty</code>의 오랜 불편이 해소됐습니다.</li>
+      <li>디코딩이 v1보다 상당히 빠르고, 인코딩은 비슷합니다.</li>
+</ul>
+<pre><code>import "encoding/json/v2"
+
+b, err := json.Marshal(v, json.Deterministic(true))
+err = json.Unmarshal(b, &amp;v,
+    json.MatchCaseInsensitiveNames(true),   // v1 동작이 필요하면 옵션으로
+    json.RejectUnknownMembers(true),
+)
+err = json.MarshalWrite(w, v)              // io.Writer 로 바로</code></pre>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p><strong>표준 라이브러리에 JSON 패키지가 영원히 두 개 남습니다.</strong> v1은 제거되지 않으므로 새로 합류한 사람은 "어느 쪽을 쓰는가"부터 배워야 합니다. 더 현실적인 위험은 1.27 업그레이드 시 v1이 v2 엔진으로 갈아끼워진다는 점입니다. Go 팀은 동작 호환을 약속하지만 에러 메시지는 달라질 수 있다고 명시했고, 에러 문자열을 검사하는 테스트나 로그 알림이 있다면 깨집니다. 업그레이드 직후 JSON 경계 테스트를 한 번 전부 돌려 보는 것이 안전합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/jsonv2-exp">A new experimental Go API for JSON</a> <span class="src">Go 블로그, 설계 배경과 v1 의 문제점 정리</span></li>
+        <li><a href="https://go.dev/doc/go1.27">Go 1.27 Release Notes</a> <span class="src">go.dev, 정식 편입과 nojsonv2 옵트아웃</span></li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section id="runtime">
+  <h2><span class="num">3</span>런타임과 성능</h2>
+  <p class="section-intro">코드를 바꾸지 않아도 얻는 이득이 많은 영역입니다. 대신 "얼마나 빨라지는가"는 워크로드에 따라 편차가 크므로, 블로그 수치를 그대로 믿기보다 자기 서비스에서 재야 합니다.</p>
+
+  <article class="item" id="gomemlimit">
+    <div class="head">
+      <h3>GOMEMLIMIT 소프트 메모리 한도</h3>
+      <span class="ver-badge">1.19</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>그동안 GC 조절 수단은 <code>GOGC</code>(힙이 몇 % 늘면 GC를 돌릴지) 하나였습니다. <code>GOMEMLIMIT</code>은 "전체 메모리를 이 이상 쓰지 말라"는 상한을 주고, 그 근처에서 GC가 더 공격적으로 돌게 합니다. 컨테이너 메모리 제한의 80~90% 정도로 잡는 것이 일반적인 출발점입니다.</p>
+<pre><code>GOMEMLIMIT=2750MiB GOGC=off ./server   # 한도만으로 운영하는 극단적 설정
+// 또는 코드에서
+debug.SetMemoryLimit(2750 &lt;&lt; 20)</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>Weaviate는 이 설정 하나로 고메모리 워크로드의 OOM kill이 크게 줄었다고 보고했고, Grafana 계열 도구들은 cgroup 한도를 읽어 자동 설정하는 <code>automemlimit</code>을 기본 탑재했습니다. Kubernetes에서 메모리 limit을 주는 서비스라면 사실상 필수 설정입니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>한도에 딱 붙으면 GC가 연속으로 돌면서 CPU를 먹는 "GC 데스 스파이럴"이 올 수 있습니다. 런타임이 GC CPU 사용을 50% 근처로 제한하는 안전장치를 두긴 했지만, 그 상태는 이미 서비스가 느려진 뒤입니다. 한도를 너무 타이트하게 잡지 말고 메트릭(<code>/gc/heap/live:bytes</code>, GC CPU 비율)을 같이 봐야 합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/doc/gc-guide">A Guide to the Go Garbage Collector</a> <span class="src">go.dev, 인터랙티브 시뮬레이터 포함</span></li>
+        <li><a href="https://weaviate.io/blog/gomemlimit-a-game-changer-for-high-memory-applications">GOMEMLIMIT is a game changer for high-memory applications</a> <span class="src">Weaviate</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="pgo">
+    <div class="head">
+      <h3>PGO 프로파일 기반 최적화</h3>
+      <span class="ver-badge">1.20 프리뷰 → 1.21 정식</span>
+      <span class="spacer"></span>
+      <span class="chip">상황에 따라</span>
+    </div>
+    <p>운영 중 수집한 CPU 프로파일(pprof)을 컴파일러에 넘기면, 실제로 뜨거운 함수를 더 적극적으로 인라인하고 인터페이스 호출을 특정 구현으로 디버추얼라이즈합니다. 모듈 루트에 <code>default.pgo</code>를 두면 <code>go build</code>가 자동으로 씁니다. Go 팀은 대표 워크로드에서 2~14% 개선을 보고했습니다.</p>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>Uber는 프로파일을 매일 자동 수집하고, 서비스별로 등록하고, CI에서 검증한 뒤 배포하는 파이프라인을 만들어 전사 적용했고, 상위 서비스에서 CPU 코어 24,000개를 절감했다고 발표했습니다. 즉 효과는 확실하지만 <strong>이득은 인프라가 받쳐줄 때 나옵니다</strong>. 프로파일을 한 번 뜨고 저장소에 커밋하는 수준으로도 쓸 수는 있지만, 프로파일이 코드와 어긋나면 효과가 줄어듭니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>빌드 시간이 늘어납니다(Uber는 프로파일 전처리 도구를 따로 만들어 해결했습니다). 프로파일이 대표성이 없으면 특정 경로만 빨라지고 나머지는 그대로이거나 바이너리만 커집니다. 소규모 팀에서는 투자 대비 효과가 애매한 경우가 많아, 먼저 GC 튜닝과 할당 줄이기를 끝낸 뒤에 손대는 것이 순서입니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/pgo">Profile-guided optimization in Go 1.21</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://www.uber.com/blog/automating-efficiency-of-go-programs-with-pgo/">Automating Efficiency of Go programs with Profile-Guided Optimizations</a> <span class="src">Uber Engineering</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="gc">
+    <div class="head">
+      <h3>Swiss Table 맵, Green Tea GC, 소형 할당 가속</h3>
+      <span class="ver-badge">1.24 → 1.26 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <ul>
+      <li><strong>1.24 Swiss Table 맵.</strong> 내장 <code>map</code>이 Abseil의 Swiss Table 설계로 교체됐습니다. 큰 맵에서 조회와 삽입이 빨라지고 메모리도 줄었습니다. 코드 변경 없이 적용됩니다. 같은 버전에 소형 객체 할당과 런타임 내부 뮤텍스도 개선됐습니다.</li>
+      <li><strong>1.25 실험 → 1.26 기본값 Green Tea GC.</strong> 객체 단위가 아니라 메모리 페이지 단위로 마킹해 캐시 지역성을 높이는 새 GC입니다. Go 팀은 GC 시간 10~40% 감소, 최신 x86에서는 벡터 명령으로 10% 추가 개선을 보고했습니다. 1.26에서는 <code>GOEXPERIMENT=nogreenteagc</code>로 되돌릴 수 있고 1.27에서 이 옵션이 제거됐습니다.</li>
+      <li><strong>1.27 크기별 할당 루틴.</strong> 80바이트 이하 소형 할당이 최대 30% 빨라졌습니다. 실제 서비스 전체로는 약 1% 수준의 개선이 기대치라고 Go 팀이 명시했습니다.</li>
+      <li><strong>1.26 cgo 호출 기본 비용 30% 감소.</strong> SQLite, 이미지 처리처럼 cgo를 많이 부르는 서비스에 의미가 있습니다.</li>
+    </ul>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>DoltHub는 Green Tea 실험 버전을 자사 DB 벤치마크에 적용했을 때 <strong>측정 가능한 개선이 없었다</strong>고 보고했습니다. Go 팀의 수치는 GC가 병목인 워크로드 기준이고, GC 시간이 전체의 몇 % 밖에 안 되는 서비스라면 체감이 없는 것이 정상입니다. 런타임 개선은 "공짜로 얻는 것"이지 "기대하고 계획할 것"이 아닙니다. 업그레이드 후 p99 지연과 GC CPU 비율을 전후 비교하는 습관이 수치보다 중요합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/swisstable">Faster Go maps with Swiss Tables</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://go.dev/blog/greenteagc">The Green Tea Garbage Collector</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://www.dolthub.com/blog/2025-09-26-greentea-gc-with-dolt/">We tried Go's experimental Green Tea garbage collector and it didn't help performance</a> <span class="src">DoltHub, 반대 사례</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="gomaxprocs">
+    <div class="head">
+      <h3>컨테이너 인식 GOMAXPROCS</h3>
+      <span class="ver-badge">1.25</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>2015년부터 Go는 <code>GOMAXPROCS</code>를 호스트의 논리 CPU 수로 잡았습니다. 컨테이너에 CPU limit 4를 줘도 노드에 64코어가 있으면 64개의 P를 만들고, 커널이 쓰로틀링해서 지연이 튀었습니다. 1.25부터 Linux cgroup의 CPU 한도를 읽어 그에 맞추고, 한도가 바뀌면 주기적으로 갱신합니다. Uber의 <code>go.uber.org/automaxprocs</code>가 하던 일이 런타임에 들어온 것입니다.</p>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>1.25로 올리면 <code>automaxprocs</code> import를 제거할 수 있습니다(GitLab Runner 등 여러 프로젝트가 실제로 제거했습니다). 단, 이 기능은 Kubernetes의 <strong>limit</strong>만 보고 <strong>request</strong>는 보지 않습니다. limit을 두지 않는 운영 정책이라면 여전히 <code>GOMAXPROCS</code>를 직접 설정해야 합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/container-aware-gomaxprocs">Container-aware GOMAXPROCS</a> <span class="src">Go 블로그</span></li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section id="testing">
+  <h2><span class="num">4</span>테스트와 진단</h2>
+  <p class="section-intro">이 영역은 1.24 이후 가장 많이 바뀐 곳입니다. 특히 "시간에 의존하는 테스트"와 "운영 중 문제 재현"이라는 두 고질병에 표준 답이 생겼습니다.</p>
+
+  <article class="item" id="synctest">
+    <div class="head">
+      <h3>testing/synctest 가짜 시계와 격리 버블</h3>
+      <span class="ver-badge">1.24 실험 → 1.25 정식 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p><code>synctest.Test(t, f)</code> 안에서 만든 고루틴은 하나의 "버블"에 들어가고, 그 안에서 <code>time</code> 패키지는 가짜 시계를 씁니다. 모든 고루틴이 블록되면 시계가 다음 타이머까지 즉시 뛰고, <code>synctest.Wait()</code>는 버블 안 고루틴이 전부 멈출 때까지 기다립니다. 1.27에 <code>synctest.Sleep</code>(Sleep과 Wait의 결합)이 추가됐습니다.</p>
+<pre><code>func TestCacheExpiry(t *testing.T) {
+    synctest.Test(t, func(t *testing.T) {
+        c := NewCache(10 * time.Minute)
+        c.Set("k", "v")
+        time.Sleep(11 * time.Minute)   // 실제로는 즉시 진행된다
+        synctest.Wait()
+        if _, ok := c.Get("k"); ok {
+            t.Fatal("expired entry still present")
+        }
+    })
+}</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>재시도 백오프, 캐시 만료, 컨텍스트 타임아웃, 레이트 리미터처럼 "실제 시간을 기다리던" 테스트가 밀리초 단위로 끝나고 플레이키가 사라집니다. VictoriaMetrics는 이 패키지로 플레이키 테스트를 정리한 경험을 공유했습니다. 다만 버블 밖의 시스템(실제 네트워크, 파일)은 가짜 시계를 모르므로, 그 경계에 있는 코드는 인터페이스로 분리해야 합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/synctest">Testing concurrent code with testing/synctest</a> <span class="src">Go 블로그, Damien Neil</span></li>
+        <li><a href="https://go.dev/blog/testing-time">Testing Time (and other asynchronicities)</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://victoriametrics.com/blog/go-synctest/">Go synctest: Solving Flaky Tests</a> <span class="src">VictoriaMetrics</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="bloop">
+    <div class="head">
+      <h3>testing.B.Loop 와 testing 패키지의 작은 개선</h3>
+      <span class="ver-badge">1.24 → 1.26</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p><code>for i := 0; i &lt; b.N; i++</code>는 컴파일러가 루프 본문을 통째로 제거해 버리는 문제와 설정 코드가 측정에 섞이는 문제가 있었습니다. <code>for b.Loop()</code>는 본문의 함수 호출을 유지하고, 루프 밖 설정 시간을 자동으로 제외합니다. 1.26부터 <code>B.Loop</code>이 인라인을 막지 않게 되어 수치가 더 현실적입니다.</p>
+<pre><code>func BenchmarkParse(b *testing.B) {
+    input := loadFixture()         // 측정에서 제외된다
+    for b.Loop() {
+        parse(input)
+    }
+}</code></pre>
+    <ul>
+      <li><strong>1.24</strong> <code>t.Context()</code> (테스트 종료 직전 취소되는 컨텍스트), <code>t.Chdir</code>, <code>go vet</code>의 <code>tests</code> 분석기(잘못된 테스트 시그니처 탐지).</li>
+      <li><strong>1.25</strong> <code>t.Attr</code>(JSON 출력에 속성 첨부), <code>t.Output()</code>(테스트 로그용 Writer), <code>go vet</code>의 <code>waitgroup</code>, <code>hostport</code> 분석기.</li>
+      <li><strong>1.26</strong> <code>t.ArtifactDir()</code>. 테스트가 남긴 파일을 CI 아티팩트로 모으는 표준 위치입니다.</li>
+    </ul>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/testing-b-loop">More predictable benchmarking with testing.B.Loop</a> <span class="src">Go 블로그</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="diag">
+    <div class="head">
+      <h3>플라이트 레코더와 고루틴 누수 프로파일</h3>
+      <span class="ver-badge">1.25 → 1.26 실험 → 1.27 정식</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p><strong>플라이트 레코더(1.25).</strong> 실행 트레이스를 메모리 링 버퍼에 계속 기록하다가, 문제가 생긴 순간 "직전 몇 초"만 파일로 떨어뜨립니다. 전체 트레이스는 너무 무거워 운영에 켜 둘 수 없었는데, 이제 p99 지연 스파이크의 원인을 사후에 볼 수 있습니다.</p>
+<pre><code>fr := trace.NewFlightRecorder(trace.FlightRecorderConfig{MinAge: 5 * time.Second})
+fr.Start()
+// ... 느린 요청을 감지한 핸들러에서
+if latency &gt; threshold {
+    f, _ := os.Create("trace.out")
+    fr.WriteTo(f)
+    f.Close()
+}</code></pre>
+    <p><strong>고루틴 누수 프로파일(1.27 정식).</strong> <code>runtime/pprof</code>에 <code>goroutineleak</code> 프로파일이 추가됐고 <code>/debug/pprof/goroutineleak</code>으로도 받을 수 있습니다. "도달할 수 없는 채널이나 뮤텍스를 기다리는 고루틴"을 런타임이 GC 정보를 이용해 찾아냅니다. Uber가 운영 환경용으로 만든 LeakProf의 아이디어가 표준에 들어온 것이며, 구현자도 Uber의 Vlad Saioc입니다.</p>
+<pre><code>go tool pprof http://localhost:6060/debug/pprof/goroutineleak</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p>지금까지는 <code>goleak</code>(테스트 전용)이나 고루틴 수 메트릭의 추세로 간접 추정했습니다. 이제 운영 중인 프로세스에서 "어느 코드 위치에서 만들어진 고루틴이 새고 있는지"를 바로 봅니다. 장기 실행 서비스의 메모리 우상향을 조사할 때 첫 번째로 뜰 프로파일이 될 것입니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>누수 프로파일은 "영원히 블록된 고루틴"만 잡습니다. 채널을 기다리지 않고 무한 루프를 돌거나, 살아 있는 채널에 붙어 있지만 아무도 보내지 않는 경우는 잡히지 않습니다. 플라이트 레코더도 기록 중 오버헤드가 0은 아니므로, 트래픽이 매우 높은 서비스에서는 샘플링 비율을 정해 두어야 합니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/flight-recorder">Flight Recorder in Go 1.25</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://www.uber.com/blog/leakprof-featherlight-in-production-goroutine-leak-detection/">LeakProf: Featherlight In-Production Goroutine Leak Detection</a> <span class="src">Uber Engineering</span></li>
+        <li><a href="https://github.com/golang/go/issues/74609">runtime/pprof, runtime: new goroutine leak profile</a> <span class="src">golang/go 제안 이슈</span></li>
+        <li><a href="https://future-architect.github.io/articles/20260128a/">Go 1.26 リリース連載 Goroutine Leak Profiles</a> <span class="src">Future Architect 기술블로그(일본어), 실험 단계 사용기</span></li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section id="tooling">
+  <h2><span class="num">5</span>도구와 빌드</h2>
+  <p class="section-intro">"Makefile에 적어 두던 것"이 차례로 <code>go.mod</code>와 <code>go</code> 명령으로 흡수됐습니다.</p>
+
+  <article class="item" id="tooldirective">
+    <div class="head">
+      <h3>go.mod 의 tool 지시어</h3>
+      <span class="ver-badge">1.24</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p><code>stringer</code>, <code>mockgen</code>, <code>golangci-lint</code> 같은 개발 도구 버전을 <code>go.mod</code>에 고정하고 <code>go tool &lt;name&gt;</code>으로 실행합니다. 예전의 <code>tools.go</code> 파일에 <code>_</code> import를 나열하던 관용구가 필요 없어졌습니다.</p>
+<pre><code>go get -tool golang.org/x/tools/cmd/stringer@latest
+go tool stringer -type=Color
+go get tool            # 등록된 도구 전부 최신으로</code></pre>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>도구의 의존성이 애플리케이션 모듈 그래프에 합쳐집니다. 도구가 끌어오는 오래된 라이브러리 때문에 애플리케이션 의존성이 꼬이거나 취약점 스캐너가 오탐을 내는 일이 생깁니다. 도구가 많다면 별도 모듈(<code>tools/go.mod</code>)로 분리하는 절충이 권장됩니다.</p>
+    </div>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://www.alexedwards.net/blog/how-to-manage-tool-dependencies-in-go-1.24-plus">How to Manage Tool Dependencies in Go 1.24+</a> <span class="src">Alex Edwards</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="gofix">
+    <div class="head">
+      <h3>go fix 모더나이저</h3>
+      <span class="ver-badge">1.26 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip now">지금 도입</span>
+    </div>
+    <p>오랫동안 사실상 죽어 있던 <code>go fix</code>가 1.26에서 완전히 다시 만들어졌습니다. <code>go vet</code>과 같은 분석 프레임워크 위에서 "옛 관용구를 새 API로 바꾸는" 수정기(modernizer) 수십 개를 실행합니다. <code>interface{}</code>→<code>any</code>, <code>v := v</code> 제거, 수동 루프→<code>slices.Contains</code>, <code>for i := 0; i &lt; n; i++</code>→<code>for i := range n</code>, <code>sort.Slice</code>→<code>slices.SortFunc</code> 같은 치환이 포함됩니다. 1.27에 <code>atomictypes</code>, <code>embedlit</code>, <code>slicesbackward</code> 등이 추가됐고, 라이브러리 작성자는 <code>//go:fix inline</code> 지시어로 "이 함수는 이렇게 바꿔 쓰세요"를 선언할 수 있습니다.</p>
+<pre><code>go fix ./...          # 모듈 전체에 모더나이저 적용 (diff 를 확인하고 커밋)</code></pre>
+    <div class="field">
+      <div class="field-label">현업에서</div>
+      <p><code>go</code> 줄을 올린 직후 한 번 돌리고 그 diff를 별도 PR로 올리는 것이 깔끔합니다. 기능 변경과 스타일 변경이 섞이지 않아 리뷰가 쉽습니다.</p>
+    </div>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>1.27에서 <code>fmtappendf</code> 수정기가 "스타일 논쟁"을 이유로 제거된 것처럼, 어떤 치환이 "더 현대적"인지는 취향이 섞입니다. 자동 치환이 가독성을 떨어뜨리는 경우(과도한 이터레이터 체인)도 있으니 diff를 기계적으로 승인하지 않는 것이 좋습니다.</p>
+    </div>
+  </article>
+
+  <article class="item" id="toolchain">
+    <div class="head">
+      <h3>툴체인 자동 관리, 워크스페이스, 기타</h3>
+      <span class="ver-badge">1.18 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <ul>
+      <li><strong>1.18 <code>go.work</code>.</strong> 여러 모듈을 한 저장소에서 함께 개발할 때 <code>replace</code> 지시어 없이 로컬 모듈을 연결합니다. 모노레포에서 표준이 됐습니다. 1.25에 <code>work</code> 패키지 패턴이 추가됐습니다.</li>
+      <li><strong>1.21 <code>toolchain</code> 지시어.</strong> <code>go.mod</code>에 적힌 버전보다 낮은 Go로 빌드하면 필요한 툴체인을 자동으로 내려받습니다. 1.25부터 <code>go get</code>이 <code>toolchain</code> 줄을 자동으로 추가하지 않게 바뀌었고, 1.26부터 <code>go mod init</code>이 한 단계 낮은 버전을 기본값으로 적습니다. 둘 다 "너무 공격적으로 최신을 요구하던" 동작을 완화한 것입니다.</li>
+      <li><strong>1.23 텔레메트리.</strong> <code>go telemetry on</code>으로 켜는 옵트인 방식입니다. 처음 제안은 옵트아웃이었고, 커뮤니티 반발로 옵트인으로 바뀌었습니다.</li>
+      <li><strong>1.25 <code>go.mod ignore</code>.</strong> <code>node_modules</code> 같은 디렉터리를 <code>./...</code> 패턴에서 제외합니다.</li>
+      <li><strong>1.27.</strong> <code>go test</code>가 <code>stdversion</code> 검사를 기본으로 돌려, <code>go</code> 줄보다 새 표준 API를 쓰면 경고합니다. <code>go doc pkg@version</code> 문법과 <code>go mod tidy</code>의 require 블록 자동 정리도 이 버전입니다.</li>
+    </ul>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/toolchain">Forward Compatibility and Toolchain Management in Go 1.21</a> <span class="src">Go 블로그, Russ Cox</span></li>
+        <li><a href="https://go.dev/blog/gotelemetry">Telemetry in Go 1.23 and beyond</a> <span class="src">Go 블로그</span></li>
+        <li><a href="https://www.alexedwards.net/blog/go-experiments-explained">Go Experiments Explained</a> <span class="src">Alex Edwards, GOEXPERIMENT 와 GODEBUG 의 차이</span></li>
+        <li><a href="https://blog.jetbrains.com/go/2026/08/20/ready-for-go-1-27-on-day-one/">Ready for Go 1.27 on Day One</a> <span class="src">JetBrains GoLand 블로그</span></li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section id="security">
+  <h2><span class="num">6</span>보안</h2>
+  <p class="section-intro">눈에 덜 띄지만 규제 산업이나 공개 서비스에서는 이쪽이 업그레이드 동기가 되는 경우가 많습니다.</p>
+
+  <article class="item" id="osroot">
+    <div class="head">
+      <h3>os.Root 경로 탈출 방지 파일 API</h3>
+      <span class="ver-badge">1.24 → 1.25</span>
+      <span class="spacer"></span>
+      <span class="chip good">권장</span>
+    </div>
+    <p><code>os.OpenRoot(dir)</code>로 연 루트는 그 아래로만 파일 접근을 허용하고, <code>../</code>나 심볼릭 링크로 바깥을 가리키면 에러를 냅니다. 사용자가 올린 파일명, 압축 해제, 템플릿 경로처럼 "경로가 외부에서 온다"면 <code>filepath.Clean</code> 검사 대신 이것을 써야 합니다. 1.25에 <code>Root.Chmod</code>, <code>Root.Symlink</code> 등 메서드가 확장됐습니다.</p>
+<pre><code>root, err := os.OpenRoot("/srv/uploads")
+f, err := root.Open(userSuppliedName)    // 루트 밖을 가리키면 실패</code></pre>
+    <div class="field">
+      <div class="field-label">참고</div>
+      <ul class="refs">
+        <li><a href="https://go.dev/blog/osroot">Traversal-resistant file APIs</a> <span class="src">Go 블로그</span></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="item" id="crypto">
+    <div class="head">
+      <h3>FIPS 140-3 모드와 포스트양자 암호</h3>
+      <span class="ver-badge">1.24 → 1.27</span>
+      <span class="spacer"></span>
+      <span class="chip">상황에 따라</span>
+    </div>
+    <ul>
+      <li><strong>1.24</strong> <code>GODEBUG=fips140=on</code>으로 검증된 암호 모듈만 쓰는 모드. 외부 BoringCrypto 빌드 없이 FIPS 요구사항을 맞출 수 있습니다. TLS 기본 키 교환에 <code>X25519MLKEM768</code>(포스트양자 하이브리드)이 포함됐습니다.</li>
+      <li><strong>1.26</strong> <code>crypto/hpke</code>(RFC 9180), 하이브리드 KEM 기본 활성화, <code>runtime/secret</code>(민감한 임시값을 사용 후 확실히 지우는 실험 패키지), 암호 함수들의 <code>rand</code> 인자 무시(항상 안전한 난수를 쓰도록 강제, 테스트는 <code>testing/cryptotest</code>로).</li>
+      <li><strong>1.27</strong> <code>crypto/mldsa</code>(FIPS 204 포스트양자 서명), TLS와 x509에서 ML-DSA 지원, <code>MLKEM1024</code>. 오래된 TLS 관련 <code>GODEBUG</code> 스위치들이 제거됐습니다.</li>
+    </ul>
+    <div class="critique">
+      <div class="field-label">비판적 시각</div>
+      <p>암호 패키지의 변화 속도가 빠르고, 1.26의 "rand 인자 무시"처럼 기존 코드의 동작을 바꾸는 결정도 있습니다. 결정적 키 생성에 의존하던 테스트가 조용히 깨질 수 있습니다. 이 영역은 릴리스 노트의 crypto 절을 빠짐없이 읽어야 하는 유일한 곳입니다.</p>
+    </div>
+  </article>
+</section>
+
+<section id="critique">
+  <h2><span class="num">7</span>비판적 시각 종합</h2>
+  <p class="section-intro">개별 항목의 비판을 모아 보면 몇 가지 큰 흐름이 보입니다. 이 흐름을 알고 있으면 "이 기능은 어디까지 믿고 어디서 멈출지"를 판단하기 쉽습니다.</p>
+
+  <div class="two">
+    <div class="callout">
+      <p><strong>1. 에러 처리 문법은 끝났습니다.</strong></p>
+      <p>2025년 6월 Go 팀은 <code>try</code>, <code>?</code> 등 에러 처리 문법 제안을 더 이상 받지 않겠다고 공식 선언했습니다. 이유는 "문제에 대한 공통 이해가 없고, 문제가 있다는 데에도 합의가 없다"는 것입니다. 10년 가까이 설문 1위였던 불만이 "해결하지 않기로 결정"된 셈입니다. <code>if err != nil</code>은 앞으로도 Go의 일부입니다. <a href="https://go.dev/blog/error-syntax">[ On | No ] syntactic support for error handling</a></p>
+    </div>
+    <div class="callout">
+      <p><strong>2. "단순함"의 정의가 바뀌고 있습니다.</strong></p>
+      <p>제네릭, 이터레이터, 제네릭 메서드가 차례로 들어오면서 언어 사양은 분명히 두꺼워졌습니다. Go 팀은 "읽는 쪽의 단순함"을 지킨다고 말하지만, 이터레이터 논쟁이 보여주듯 그 경계는 사람마다 다릅니다. 팀 차원에서 "어디까지 쓴다"는 가이드를 만드는 것이 예전보다 중요해졌습니다.</p>
+    </div>
+    <div class="callout">
+      <p><strong>3. 호환성은 컴파일 기준입니다.</strong></p>
+      <p>루프 변수, 타이머 채널, 리다이렉트 코드, JSON 엔진 교체, 암호 rand 인자 무시. 모두 "컴파일은 되지만 동작이 다른" 변경이고, <code>go</code> 줄이나 <code>GODEBUG</code>로 단계적으로 적용됩니다. 이 메커니즘은 잘 설계됐지만, 아는 사람만 압니다. 업그레이드 PR에는 <a href="https://go.dev/doc/godebug">GODEBUG 문서</a>의 해당 버전 절을 링크하는 습관이 필요합니다.</p>
+    </div>
+    <div class="callout">
+      <p><strong>4. 실험 기능은 실험입니다.</strong></p>
+      <p><code>arena</code>(1.20)는 실험으로 들어온 뒤 정식화가 보류됐고, <code>simd</code>는 1.26부터 실험 상태입니다. 반면 synctest, json/v2, Green Tea는 실험을 거쳐 정식이 됐습니다. <code>GOEXPERIMENT</code> 뒤의 기능을 운영 빌드에 넣는 것은 "Go 팀이 언제든 바꿀 수 있는 API에 의존한다"는 뜻입니다.</p>
+    </div>
+    <div class="callout">
+      <p><strong>5. 표준 라이브러리가 외부 생태계를 흡수하지만 통일하지는 못합니다.</strong></p>
+      <p>slog는 zap을, ServeMux는 chi를, slices는 lo를, uuid는 google/uuid를 대체하려 했지만 어느 것도 완전히 대체하지 못했습니다. "표준이 있으니 외부 패키지를 걷어내자"는 결정은 기능 표를 실제로 대조한 뒤에 내려야 합니다.</p>
+    </div>
+    <div class="callout">
+      <p><strong>6. 성능 수치는 Go 팀의 워크로드 기준입니다.</strong></p>
+      <p>PGO 2~14%, Green Tea 10~40%, 소형 할당 30%. 전부 사실이지만 조건부입니다. DoltHub의 Green Tea 사례처럼 "효과 없음"도 정상적인 결과입니다. 런타임 개선은 기대치가 아니라 사후 확인 대상입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="checklist">
+  <h2><span class="num">8</span>현업 적용 체크리스트</h2>
+  <p class="section-intro">1.22 근처에 있는 프로젝트를 1.27로 올린다고 가정한 순서입니다. 한 번에 올려도 되지만, 단계마다 테스트를 돌려 어느 변경이 무엇을 깨뜨렸는지 알 수 있게 하는 것이 목적입니다.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>단계</th><th>할 일</th><th>확인할 것</th></tr></thead>
+    <tbody>
+      <tr><td class="ver">0</td><td>툴체인만 1.27로 올리고 <code>go</code> 줄은 그대로 둔 채 빌드와 테스트</td><td>런타임 개선(GC, 맵, 할당)은 이 단계에서 이미 적용됩니다. p99 와 GC CPU 비율을 전후 비교</td></tr>
+      <tr><td class="ver">1</td><td><code>go</code> 줄을 1.22로 올리고 <code>v := v</code> 제거</td><td>루프 변수 의미 변경. 레이스 디텍터(<code>-race</code>)로 테스트</td></tr>
+      <tr><td class="ver">2</td><td><code>go</code> 줄을 1.23으로. <code>maps.Keys</code> 반환 타입 변경 주의</td><td>타이머 채널이 비버퍼로 바뀜. <code>time.After</code>/<code>Ticker</code>를 select 에서 쓰는 코드 점검</td></tr>
+      <tr><td class="ver">3</td><td>1.24. <code>tools.go</code>를 <code>tool</code> 지시어로, <code>omitempty</code> 중 구조체 영값은 <code>omitzero</code>로</td><td>FIPS 요구가 있다면 <code>fips140=on</code> 검토</td></tr>
+      <tr><td class="ver">4</td><td>1.25. <code>automaxprocs</code> 제거, 시간 의존 테스트를 <code>synctest</code>로, 플라이트 레코더 훅 추가</td><td>Kubernetes CPU limit 정책 확인(limit 없으면 GOMAXPROCS 수동)</td></tr>
+      <tr><td class="ver">5</td><td>1.26. <code>go fix ./...</code> 실행 후 diff 를 별도 PR로</td><td>ServeMux 끝 슬래시 리다이렉트 307. 암호 함수 rand 인자 무시로 결정적 테스트 깨짐</td></tr>
+      <tr><td class="ver">6</td><td>1.27. JSON 경계 테스트 전부 실행, 에러 메시지 문자열 검사 제거, <code>goroutineleak</code> 엔드포인트 노출</td><td>json v1 이 v2 엔진으로 교체됨. 문제가 있으면 <code>GOEXPERIMENT=nojsonv2</code>로 격리한 뒤 원인 추적</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>단계마다 공통으로 적용할 것은 <code>go vet ./...</code>(새 분석기가 버전마다 추가됨), <code>govulncheck</code>, 그리고 <a href="https://go.dev/doc/godebug">GODEBUG 문서</a>에서 해당 버전 절을 읽는 것입니다.</p>
+</section>
+
+<footer>
+  <p>이 문서는 2026-08-23 기준으로 작성했습니다. 공식 릴리스 노트(go.dev/doc/go1.XX)를 1차 출처로 삼고, 기업 기술블로그와 개인 블로그는 실제 적용 사례와 반대 의견을 보여주는 용도로 연결했습니다. 성능 수치는 모두 해당 출처가 보고한 조건에서의 값입니다.</p>
+</footer>
+</main>
+</div>
